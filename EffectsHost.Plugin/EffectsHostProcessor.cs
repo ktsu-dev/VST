@@ -22,6 +22,7 @@ public abstract class EffectsHostProcessor<TModel> : AudioProcessor<TModel>
 	where TModel : EffectsHostModel, new()
 {
 	private double[] hostNormalizedValues = [];
+	private long engineRegistrationId;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="EffectsHostProcessor{TModel}"/> class.
@@ -41,7 +42,30 @@ public abstract class EffectsHostProcessor<TModel> : AudioProcessor<TModel>
 
 		Engine = new AudioEngine(Model.Effect);
 		hostNormalizedValues = new double[Model.EffectParameters.Count];
+		engineRegistrationId = EngineRegistry.Register(Engine);
 		return true;
+	}
+
+	/// <inheritdoc/>
+	protected override void Terminate()
+	{
+		EngineRegistry.Unregister(engineRegistrationId);
+		base.Terminate();
+	}
+
+	/// <inheritdoc/>
+	protected override void OnConnect(IAudioConnectionPoint connectionPoint)
+	{
+		// Hand the controller a key to this processor's engine so the editor gets the direct
+		// (in-process) UI→audio mailbox and the telemetry ring buffer.
+		if (Host is { } host && host.TryCreateMessage(EngineRegistry.BridgeMessageId, out AudioMessage message))
+		{
+			using (message)
+			{
+				_ = message.Attributes.TrySetInt64(EngineRegistry.EngineIdAttribute, engineRegistrationId);
+				connectionPoint?.Notify(message);
+			}
+		}
 	}
 
 	/// <inheritdoc/>

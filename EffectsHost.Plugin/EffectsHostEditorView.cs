@@ -24,7 +24,7 @@ using NPlug;
 /// and closing the editor disposes it. Parameter edits are wrapped in the controller's
 /// begin/perform/end edit protocol so the host sees them as automation gestures.
 /// </remarks>
-internal sealed class EffectsHostEditorView<TModel> : IAudioPluginView
+public sealed class EffectsHostEditorView<TModel> : IAudioPluginView
 	where TModel : EffectsHostModel, new()
 {
 	private const int DefaultWidth = 480;
@@ -35,6 +35,7 @@ internal sealed class EffectsHostEditorView<TModel> : IAudioPluginView
 	private readonly EffectsHostController<TModel> controller;
 	private readonly string[] sliderFormats;
 	private IImGuiAppSession? session;
+	private MeterFrame lastMeterFrame;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="EffectsHostEditorView{TModel}"/> class.
@@ -155,9 +156,28 @@ internal sealed class EffectsHostEditorView<TModel> : IAudioPluginView
 			DrawBypassToggle();
 			ImGui.Separator();
 			DrawParameterSliders();
+			ImGui.Separator();
+			DrawMeters();
 		}
 
 		ImGui.End();
+	}
+
+	private void DrawMeters()
+	{
+		if (controller.Engine is not { } engine)
+		{
+			return;
+		}
+
+		// Drain everything the audio thread published since the last frame; display the newest.
+		while (engine.TryReadTelemetry(out MeterFrame frame))
+		{
+			lastMeterFrame = frame;
+		}
+
+		ImGui.ProgressBar(Math.Clamp(lastMeterFrame.PeakLeft, 0.0f, 1.0f), default, "L");
+		ImGui.ProgressBar(Math.Clamp(lastMeterFrame.PeakRight, 0.0f, 1.0f), default, "R");
 	}
 
 	private void DrawBypassToggle()
@@ -197,6 +217,10 @@ internal sealed class EffectsHostEditorView<TModel> : IAudioPluginView
 			if (changed && ReferenceEquals(controller.EditedParameter, parameter))
 			{
 				parameter.NormalizedValue = parameter.ToNormalized(plainValue);
+
+				// Also post straight to the audio thread's mailbox so the edit lands on the next
+				// block instead of waiting for the host's parameter round-trip.
+				_ = controller.Engine?.TryPostParameterChange(i, plainValue);
 			}
 
 			if (ImGui.IsItemDeactivated() && ReferenceEquals(controller.EditedParameter, parameter))

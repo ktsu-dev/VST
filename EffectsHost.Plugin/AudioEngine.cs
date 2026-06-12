@@ -4,7 +4,9 @@
 
 namespace ktsu.EffectsHost.Plugin;
 
+using ktsu.Containers;
 using ktsu.EffectsHost.Core;
+using ktsu.Invoker;
 
 /// <summary>
 /// The host-independent real-time core of the plugin: it owns the <see cref="IAudioEffect"/>
@@ -16,12 +18,26 @@ using ktsu.EffectsHost.Core;
 /// allocation, no locks, no blocking, no I/O. All state is allocated in the constructor and
 /// <see cref="Prepare"/>. Keeping this class free of NPlug types lets the soak test drive the
 /// exact production audio path without a plugin host.
+///
+/// <para>
+/// <b>Cross-thread channels.</b> UI → audio parameter changes are posted through an
+/// <see cref="Invoker"/> owned by the audio thread via the non-blocking, allocation-free
+/// <see cref="Invoker.TryBeginInvoke"/>, and pumped at the top of each block; the audio thread
+/// never blocks on the UI. Audio → UI telemetry travels the other way through a lock-free
+/// single-producer/single-consumer <see cref="SpscRingBuffer{T}"/>, never through the invoker.
+/// </para>
 /// </remarks>
 public sealed class AudioEngine
 {
+	private const int MailboxCapacity = 256;
+	private const int TelemetryCapacity = 256;
+
 	private readonly EffectParameter[] descriptors;
 	private readonly double[] parameterValues;
 	private readonly double[] lastHostNormalized;
+	private readonly SpscRingBuffer<MeterFrame> telemetry = new(TelemetryCapacity);
+	private Invoker? audioMailbox;
+	private int audioThreadId = -1;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="AudioEngine"/> class around an effect.
@@ -58,6 +74,32 @@ public sealed class AudioEngine
 	public void Reset() => Effect.Reset();
 
 	/// <summary>
+	/// Posts a plain-value parameter change from the UI thread to the audio thread without
+	/// blocking. The value is applied at the start of the next audio block.
+	/// </summary>
+	/// <param name="parameterIndex">The parameter's index in <see cref="IAudioEffect.Parameters"/>.</param>
+	/// <param name="plainValue">The new plain (real-unit) value.</param>
+	/// <returns>
+	/// <see langword="true"/> when the change was queued (or applied inline on the audio thread);
+	/// <see langword="false"/> when audio is not running yet or the mailbox was full — callers can
+	/// simply drop the change, because the host echo of the same edit will still arrive through
+	/// the normal parameter sync.
+	/// </returns>
+	public bool TryPostParameterChange(int parameterIndex, double plainValue)
+	{
+		Invoker? mailbox = Volatile.Read(ref audioMailbox);
+		return mailbox is not null
+			&& mailbox.TryBeginInvoke(() => ApplyPostedParameterChange(parameterIndex, plainValue));
+	}
+
+	/// <summary>
+	/// Drains one telemetry frame published by the audio thread. Call from a single UI thread.
+	/// </summary>
+	/// <param name="frame">The dequeued frame, when available.</param>
+	/// <returns><see langword="true"/> when a frame was available.</returns>
+	public bool TryReadTelemetry(out MeterFrame frame) => telemetry.TryDequeue(out frame);
+
+	/// <summary>
 	/// Processes one block of stereo audio on the audio thread.
 	/// </summary>
 	/// <param name="hostNormalizedValues">The host's current normalized parameter values, indexed like <see cref="IAudioEffect.Parameters"/>.</param>
@@ -76,6 +118,17 @@ public sealed class AudioEngine
 		Span<float> outputLeft,
 		Span<float> outputRight)
 	{
+		// Own (or re-own, if the host migrated processing) the UI→audio mailbox on this thread,
+		// then pump it. Creation is the only allocation and happens outside steady state; the
+		// pump itself is allocation-free and never blocks.
+		if (audioThreadId != Environment.CurrentManagedThreadId)
+		{
+			audioThreadId = Environment.CurrentManagedThreadId;
+			Volatile.Write(ref audioMailbox, new Invoker(MailboxCapacity));
+		}
+
+		audioMailbox?.DoInvokes();
+
 		// Fold host automation into the plain-value snapshot. Denormalizing only on change keeps
 		// the steady-state cost at one comparison per parameter per block.
 		for (int i = 0; i < descriptors.Length; i++)
@@ -92,19 +145,47 @@ public sealed class AudioEngine
 		{
 			inputLeft.CopyTo(outputLeft);
 			inputRight.CopyTo(outputRight);
+		}
+		else
+		{
+			Effect.ProcessBlock(new EffectBlock
+			{
+				SampleCount = inputLeft.Length,
+				SampleRate = sampleRate,
+				ParameterValues = parameterValues,
+				InputLeft = inputLeft,
+				InputRight = inputRight,
+				OutputLeft = outputLeft,
+				OutputRight = outputRight,
+			});
+		}
+
+		PublishTelemetry(outputLeft, outputRight);
+	}
+
+	private void PublishTelemetry(ReadOnlySpan<float> outputLeft, ReadOnlySpan<float> outputRight)
+	{
+		float peakLeft = 0.0f;
+		float peakRight = 0.0f;
+		for (int i = 0; i < outputLeft.Length; i++)
+		{
+			peakLeft = MathF.Max(peakLeft, MathF.Abs(outputLeft[i]));
+			peakRight = MathF.Max(peakRight, MathF.Abs(outputRight[i]));
+		}
+
+		// Dropping frames when the UI is not draining is the correct behaviour: the audio
+		// thread must never wait for a consumer.
+		_ = telemetry.TryEnqueue(new MeterFrame(peakLeft, peakRight));
+	}
+
+	private void ApplyPostedParameterChange(int parameterIndex, double plainValue)
+	{
+		if ((uint)parameterIndex >= (uint)parameterValues.Length)
+		{
 			return;
 		}
 
-		Effect.ProcessBlock(new EffectBlock
-		{
-			SampleCount = inputLeft.Length,
-			SampleRate = sampleRate,
-			ParameterValues = parameterValues,
-			InputLeft = inputLeft,
-			InputRight = inputRight,
-			OutputLeft = outputLeft,
-			OutputRight = outputRight,
-		});
+		parameterValues[parameterIndex] = descriptors[parameterIndex].Range.Clamp(plainValue);
 	}
 
 	private void SeedParameterDefaults()

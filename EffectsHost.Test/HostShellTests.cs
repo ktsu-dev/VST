@@ -59,12 +59,14 @@ public sealed class HostShellTests
 	}
 
 	[TestMethod]
-	public void FactoryRegistersGainDevice()
+	public void FactoryRegistersGainAndDelayDevices()
 	{
 		AudioPluginFactory factory = EffectsHostPlugin.GetFactory();
 
-		Assert.AreEqual(2, factory.PluginClassInfos.Count);
+		Assert.AreEqual(4, factory.PluginClassInfos.Count);
 		Assert.AreEqual(GainProcessor.ClassId, factory.PluginClassInfos[0].ClassId);
 		Assert.AreEqual(GainController.ClassId, factory.PluginClassInfos[1].ClassId);
+		Assert.AreEqual(DelayProcessor.ClassId, factory.PluginClassInfos[2].ClassId);
+		Assert.AreEqual(DelayController.ClassId, factory.PluginClassInfos[3].ClassId);
 	}
 }

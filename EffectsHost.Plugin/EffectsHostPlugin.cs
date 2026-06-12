@@ -22,6 +22,8 @@ public static class EffectsHostPlugin
 		AudioPluginFactory factory = new(new("ktsu.dev", "https://github.com/ktsu-dev/vst", "support@ktsu.dev"));
 		factory.RegisterPlugin<GainProcessor>(new(GainProcessor.ClassId, "EffectsHost Gain", AudioProcessorCategory.Effect));
 		factory.RegisterPlugin<GainController>(new(GainController.ClassId, "EffectsHost Gain Controller"));
+		factory.RegisterPlugin<DelayProcessor>(new(DelayProcessor.ClassId, "EffectsHost Delay", AudioProcessorCategory.Effect));
+		factory.RegisterPlugin<DelayController>(new(DelayController.ClassId, "EffectsHost Delay Controller"));
 		return factory;
 	}
 
