@@ -15,6 +15,8 @@
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="ktsu.Containers" />
     <PackageReference Include="ktsu.ImGui.App" />
+    <PackageReference Include="ktsu.ImGui.Styler" />
+    <PackageReference Include="ktsu.ImGui.Widgets" />
     <PackageReference Include="ktsu.Invoker" />
     <PackageReference Include="ktsu.Semantics.Quantities" />
     <PackageReference Include="ktsu.SerializationProvider" />

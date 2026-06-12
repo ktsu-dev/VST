@@ -43,4 +43,7 @@ public sealed class GainController : EffectsHostController<GainModel>
 {
 	/// <summary>The stable VST3 controller class id of the Gain device.</summary>
 	public static readonly Guid ClassId = new("05ded0dc-50dc-4b43-b9d3-b1955ad20e09");
+
+	/// <inheritdoc/>
+	public override Guid ProcessorClassId => GainProcessor.ClassId;
 }
