@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Sdk Name="ktsu.Sdk" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EffectsHost.Core\EffectsHost.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ktsu.Containers" />
+    <PackageReference Include="ktsu.Semantics.Quantities" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" />
+  </ItemGroup>
+</Project>

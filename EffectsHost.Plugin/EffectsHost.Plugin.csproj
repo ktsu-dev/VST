@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Sdk Name="ktsu.Sdk" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EffectsHost.Core\EffectsHost.Core.csproj" />
+    <ProjectReference Include="..\EffectsHost.Effects\EffectsHost.Effects.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="ktsu.Containers" />
+    <PackageReference Include="ktsu.ImGui.App" />
+    <PackageReference Include="ktsu.Invoker" />
+    <PackageReference Include="ktsu.Semantics.Quantities" />
+    <PackageReference Include="ktsu.SerializationProvider" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" />
+    <PackageReference Include="NPlug" />
+  </ItemGroup>
+</Project>
