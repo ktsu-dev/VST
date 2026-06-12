@@ -20,7 +20,9 @@
     <PackageReference Include="ktsu.Invoker" />
     <PackageReference Include="ktsu.Semantics.Quantities" />
     <PackageReference Include="ktsu.SerializationProvider" />
+    <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" />
     <PackageReference Include="NPlug" />
+    <PackageReference Include="Polyfill" />
   </ItemGroup>
 </Project>
