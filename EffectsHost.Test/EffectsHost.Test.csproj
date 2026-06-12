@@ -1,0 +1,17 @@
+﻿<Project>
+  <Sdk Name="MStest.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <TestingPlatformShowTestsFailure>true</TestingPlatformShowTestsFailure>
+    <TestingPlatformShowTestsFailureDetails>true</TestingPlatformShowTestsFailureDetails>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EffectsHost.Core\EffectsHost.Core.csproj" />
+  </ItemGroup>
+</Project>

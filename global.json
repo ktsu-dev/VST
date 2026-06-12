@@ -1,0 +1,13 @@
+{
+  "sdk": {
+    "version": "10.0.100",
+    "rollForward": "latestFeature"
+  },
+  "msbuild-sdks": {
+    "MSTest.Sdk": "4.2.3",
+    "ktsu.Sdk": "2.8.0"
+  },
+  "test": {
+    "runner": "Microsoft.Testing.Platform"
+  }
+}

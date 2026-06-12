@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="EffectsHost.Core/EffectsHost.Core.csproj" />
+  <Project Path="EffectsHost.Test/EffectsHost.Test.csproj" />
+</Solution>
