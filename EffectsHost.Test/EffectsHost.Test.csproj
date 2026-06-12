@@ -13,5 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EffectsHost.Core\EffectsHost.Core.csproj" />
+    <ProjectReference Include="..\EffectsHost.Effects\EffectsHost.Effects.csproj" />
+    <ProjectReference Include="..\EffectsHost.Plugin\EffectsHost.Plugin.csproj" />
   </ItemGroup>
 </Project>
