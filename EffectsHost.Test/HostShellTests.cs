@@ -12,6 +12,15 @@ using NPlug;
 /// <summary>
 /// Tests for the NPlug host shell that is auto-built from an effect definition.
 /// </summary>
+/// <remarks>
+/// These tests deliberately do not call <c>AudioProcessorModel.Initialize()</c>. The parameter
+/// set, bypass parameter, and taper mapping are all built in the model constructor; Initialize only
+/// allocates NPlug's internal native shared-parameter buffer, which is exercised inside a real host.
+/// NPlug 0.4.0.377 allocates that buffer with <c>NativeMemory.AlignedAlloc</c> but frees it with the
+/// mismatched <c>NativeMemory.Free</c> in <c>Dispose</c>; on Windows that pairing corrupts the heap
+/// (exit code 0xC0000374), so initializing and disposing a model in-process would crash the test
+/// host. (On Linux the two are compatible, which is why it only surfaces on the Windows CI runner.)
+/// </remarks>
 [TestClass]
 public sealed class HostShellTests
 {
@@ -19,7 +28,6 @@ public sealed class HostShellTests
 	public void ModelIsBuiltFromEffectDefinition()
 	{
 		using GainModel model = new();
-		model.Initialize();
 
 		Assert.AreEqual("Gain", model.Effect.Name);
 		Assert.IsNotNull(model.ByPassParameter);
@@ -34,7 +42,6 @@ public sealed class HostShellTests
 	public void EffectParameterMapsThroughItsTaper()
 	{
 		using GainModel model = new();
-		model.Initialize();
 
 		EffectAudioParameter gain = model.EffectParameters[GainEffect.GainParameterIndex];
 
@@ -51,7 +58,6 @@ public sealed class HostShellTests
 	public void EffectParameterFormatsPlainValuesForDisplay()
 	{
 		using GainModel model = new();
-		model.Initialize();
 
 		EffectAudioParameter gain = model.EffectParameters[GainEffect.GainParameterIndex];
 		Assert.AreEqual("0.0", gain.ToString(gain.DefaultNormalizedValue));
