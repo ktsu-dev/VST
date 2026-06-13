@@ -27,19 +27,13 @@ public sealed class EffectAudioParameter : AudioParameter
 	/// <param name="descriptor">The effect parameter descriptor to expose to the host.</param>
 	public EffectAudioParameter(EffectParameter descriptor)
 		: base(
-			Validated(descriptor).Name,
+			Ensure.NotNull(descriptor).Name,
 			units: descriptor.Units,
 			stepCount: descriptor.StepCount,
 			defaultNormalizedValue: descriptor.Range.Normalize(descriptor.DefaultValue))
 	{
 		Descriptor = descriptor;
 		Precision = descriptor.DisplayPrecision;
-	}
-
-	private static EffectParameter Validated(EffectParameter descriptor)
-	{
-		ArgumentNullException.ThrowIfNull(descriptor);
-		return descriptor;
 	}
 
 	/// <summary>Gets the descriptor this parameter was built from.</summary>

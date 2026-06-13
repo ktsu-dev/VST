@@ -65,7 +65,7 @@ public abstract class EffectsHostController<TModel> : AudioController<TModel>
 	/// <param name="state">The preset state to apply.</param>
 	public void ApplyPresetState(EffectsHostPresetState state)
 	{
-		ArgumentNullException.ThrowIfNull(state);
+		_ = Ensure.NotNull(state);
 
 		IReadOnlyList<EffectAudioParameter> parameters = Model.EffectParameters;
 		for (int i = 0; i < parameters.Count; i++)

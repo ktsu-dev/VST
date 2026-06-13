@@ -29,7 +29,7 @@ public abstract class EffectsHostModel : AudioProcessorModel
 	/// <param name="effect">The effect whose parameters define this model.</param>
 	protected EffectsHostModel(IAudioEffect effect) : base(effect?.Name ?? string.Empty)
 	{
-		ArgumentNullException.ThrowIfNull(effect);
+		_ = Ensure.NotNull(effect);
 
 		Effect = effect;
 		AddByPassParameter();
