@@ -13,6 +13,8 @@
   <ItemGroup>
     <PackageReference Include="ktsu.Containers" />
     <PackageReference Include="ktsu.Semantics.Quantities" />
+    <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" />
+    <PackageReference Include="Polyfill" />
   </ItemGroup>
 </Project>

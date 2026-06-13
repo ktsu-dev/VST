@@ -23,16 +23,31 @@ the parameters, automation, state persistence, and Dear ImGui editor for free.
 - Audio → UI telemetry (metering) goes through `ktsu.Containers`' lock-free SPSC ring buffer.
 - Delay effects use the denormal-aware `DelayLine` so feedback tails cannot cause CPU spikes.
 
-## Building
+## Editor
+
+The editor is a themed (Catppuccin Mocha via `ktsu.ImGui.Styler`) Dear ImGui panel: taper-correct
+knobs per parameter (`ktsu.ImGui.Widgets`), L/R dB meters with peak hold fed by the telemetry
+ring, bypass, and `.vstpreset` save/load. On Windows it docks into the host's editor window via
+`ImGuiApp.StartEmbedded`; on macOS/Linux it falls back to a floating window driven by the same
+non-blocking session API until upstream embedded hosting covers those platforms.
+
+## Building & installing
 
 ```sh
 dotnet build
 ```
 
 NPlug emits a native proxy that loads the CLR, so a Debug build is enough to load the plugin in a
-host while developing — no NativeAOT publish required. The `.vst3` bundle layout is
-`EffectsHost.vst3/Contents/<arch>/...`; see the
-[NPlug documentation](https://github.com/xoofx/NPlug/blob/main/doc/readme.md) for packaging details.
+host while developing — no NativeAOT publish required. To build and copy the plugin into a VST3
+folder in one step:
+
+```pwsh
+./build/install-vst3.ps1                  # Windows: %CommonProgramFiles%\VST3\EffectsHost
+./build/install-vst3.sh                   # macOS/Linux: user VST3 folder
+```
+
+See the [NPlug documentation](https://github.com/xoofx/NPlug/blob/main/doc/readme.md) for
+NativeAOT publishing details.
 
 ## License
 

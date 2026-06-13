@@ -45,7 +45,7 @@ public sealed class AudioEngine
 	/// <param name="effect">The effect instance this engine drives.</param>
 	public AudioEngine(IAudioEffect effect)
 	{
-		ArgumentNullException.ThrowIfNull(effect);
+		_ = Ensure.NotNull(effect);
 
 		Effect = effect;
 		descriptors = [.. effect.Parameters];

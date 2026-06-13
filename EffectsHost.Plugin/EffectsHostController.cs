@@ -16,6 +16,12 @@ public abstract class EffectsHostController<TModel> : AudioController<TModel>
 	where TModel : EffectsHostModel, new()
 {
 	/// <summary>
+	/// Gets the paired processor's VST3 class id, used to tag <c>.vstpreset</c> files written by
+	/// the editor so each preset stays bound to the device that created it.
+	/// </summary>
+	public abstract Guid ProcessorClassId { get; }
+
+	/// <summary>
 	/// Gets the paired processor's real-time engine, once the host has connected the components.
 	/// Used by the editor for the direct UI → audio parameter mailbox and telemetry.
 	/// </summary>
@@ -59,7 +65,7 @@ public abstract class EffectsHostController<TModel> : AudioController<TModel>
 	/// <param name="state">The preset state to apply.</param>
 	public void ApplyPresetState(EffectsHostPresetState state)
 	{
-		ArgumentNullException.ThrowIfNull(state);
+		_ = Ensure.NotNull(state);
 
 		IReadOnlyList<EffectAudioParameter> parameters = Model.EffectParameters;
 		for (int i = 0; i < parameters.Count; i++)

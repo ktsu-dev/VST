@@ -38,4 +38,7 @@ public sealed class DelayController : EffectsHostController<DelayModel>
 {
 	/// <summary>The stable VST3 controller class id of the Delay device.</summary>
 	public static readonly Guid ClassId = new("0ddf2d67-c9b2-4745-aa4c-5b3ba23cffdd");
+
+	/// <inheritdoc/>
+	public override Guid ProcessorClassId => DelayProcessor.ClassId;
 }

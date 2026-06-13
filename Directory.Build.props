@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <!-- ktsu.Sdk 2.8.0's SetPackageReferenceProperties target hooks
+         BeforeTargets="GenerateMSBuildEditorConfigFile", but that umbrella target's
+         DependsOnTargets (which snapshot CompilerVisibleProperty values) run first, so the
+         Has* properties it computes never reach the KTSU0001 analyzer and every project is
+         flagged as missing the standard packages. Set them statically at evaluation time
+         instead; every project in this solution genuinely references all three packages.
+         Remove once the Sdk computes these during evaluation (or hooks
+         GenerateMSBuildEditorConfigFileCore). -->
+    <HasSourceLinkGitHub>true</HasSourceLinkGitHub>
+    <HasSourceLinkAzureRepos>true</HasSourceLinkAzureRepos>
+    <HasPolyfill>true</HasPolyfill>
+  </PropertyGroup>
+</Project>
