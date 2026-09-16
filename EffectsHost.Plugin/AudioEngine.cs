@@ -134,6 +134,19 @@ public sealed class AudioEngine
 		for (int i = 0; i < descriptors.Length; i++)
 		{
 			double normalized = hostNormalizedValues[i];
+
+			// A host can deliver a non-finite normalized value — an automation glitch,
+			// automation read before transport start, or a misbehaving upstream node. Nothing
+			// downstream would stop it: Denormalize clamps with comparisons that are all false
+			// for NaN, so it passes straight through, and the effects' one-pole smoothers latch
+			// it permanently. Holding the last good value keeps the block finite, and leaving
+			// lastHostNormalized untouched lets the parameter resume the moment sane automation
+			// does.
+			if (!double.IsFinite(normalized))
+			{
+				continue;
+			}
+
 			if (normalized != lastHostNormalized[i])
 			{
 				lastHostNormalized[i] = normalized;
@@ -180,7 +193,11 @@ public sealed class AudioEngine
 
 	private void ApplyPostedParameterChange(int parameterIndex, double plainValue)
 	{
-		if ((uint)parameterIndex >= (uint)parameterValues.Length)
+		// Range.Clamp shares Denormalize's blind spot, so a non-finite plain value would latch
+		// the same way a non-finite host value does. Dropping the change is safe: the UI cannot
+		// produce one in normal operation, and the host echo of a real edit still arrives
+		// through the parameter fold.
+		if ((uint)parameterIndex >= (uint)parameterValues.Length || !double.IsFinite(plainValue))
 		{
 			return;
 		}
