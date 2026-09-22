@@ -23,6 +23,6 @@
     <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" />
     <PackageReference Include="NPlug" />
-    <PackageReference Include="Polyfill" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
   </ItemGroup>
 </Project>
