@@ -10,7 +10,6 @@
     <PackageVersion Include="ktsu.ImGui.Widgets" Version="2.15.0" />
     <PackageVersion Include="ktsu.Invoker" Version="1.2.2" />
     <PackageVersion Include="ktsu.Semantics.Quantities" Version="1.1.1" />
-    <PackageVersion Include="ktsu.SerializationProvider" Version="1.0.7" />
     <PackageVersion Include="Microsoft.SourceLink.AzureRepos.Git" Version="10.0.401" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
     <PackageVersion Include="NPlug" Version="0.4.0.377" />
