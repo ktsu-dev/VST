@@ -20,13 +20,34 @@ using System.Text.Json;
 public static class JsonStateProvider
 {
 	/// <summary>
-	/// Indented, because the indentation is part of the bytes a <c>.vstpreset</c> carries: presets
-	/// written before the archived codec was replaced have to go on comparing equal to ones written
-	/// after it, and a preset opened in a text editor stays readable.
+	/// The options every preset payload is written with.
 	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// Indented, because the indentation is inside the component chunk and so is part of the bytes a
+	/// <c>.vstpreset</c> carries, and because a preset opened in a text editor should be readable.
+	/// </para>
+	/// <para>
+	/// <see cref="JsonSerializerOptions.NewLine"/> is pinned to <c>"\n"</c> rather than left to
+	/// default, and that is load-bearing. The default is <see cref="Environment.NewLine"/>, so the
+	/// same preset written on Windows and on Linux came out as two different files - six bytes apart
+	/// here, and the chunk offsets in the container header differ with it. That was true of the
+	/// archived codec too, so it is a defect this inherited rather than introduced, and it made a
+	/// preset's bytes depend on the machine that saved it: hashing, byte-comparing or deduplicating
+	/// presets across a team gave different answers for identical state.
+	/// </para>
+	/// <para>
+	/// Pinning it makes the output identical everywhere and equal to what the archived codec wrote on
+	/// Linux and macOS. On Windows the newlines inside the JSON payload change from CRLF to LF, which
+	/// is whitespace JSON does not ascribe meaning to: presets written by the old code still load
+	/// unchanged on every platform, which is what
+	/// <c>PresetCodecTests.APresetWrittenByTheArchivedCodecStillLoads</c> holds.
+	/// </para>
+	/// </remarks>
 	private static readonly JsonSerializerOptions Options = new()
 	{
 		WriteIndented = true,
+		NewLine = "\n",
 	};
 
 	/// <summary>Serializes a value to JSON.</summary>

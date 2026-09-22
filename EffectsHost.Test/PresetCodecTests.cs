@@ -162,4 +162,34 @@ public sealed class PresetCodecTests
 
 		Assert.IsNull(bareRestored.ControllerState);
 	}
+
+	/// <summary>
+	/// The bytes a preset is written as do not depend on the line endings of the machine that wrote
+	/// it.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// <c>WriteIndented</c> defaults to <see cref="Environment.NewLine"/>, so before the newline was
+	/// pinned this same state came out six bytes longer on Windows than on Linux, with every chunk
+	/// offset in the container header shifted to match. A preset's bytes depended on who saved it.
+	/// </para>
+	/// <para>
+	/// Asserted as "no CR anywhere in the payload" rather than by comparing two platforms, so the
+	/// check means the same thing on whichever one runs it - this is precisely the test that has to
+	/// keep working on a Linux-only run to be worth anything.
+	/// </para>
+	/// </remarks>
+	[TestMethod]
+	public void PresetBytesDoNotDependOnTheHostsLineEndings()
+	{
+		PresetCodec codec = new(GainProcessor.ClassId);
+
+		byte[] payload = VstPresetFile.FromBytes(codec.Encode(MakeState())).ComponentState;
+		string json = Encoding.UTF8.GetString(payload);
+
+		Assert.IsTrue(json.Contains('\n', StringComparison.Ordinal), "The payload is not indented at all.");
+		Assert.IsFalse(
+			json.Contains('\r', StringComparison.Ordinal),
+			"The payload carries CR, so its bytes follow the host's line endings rather than being fixed.");
+	}
 }
