@@ -265,6 +265,6 @@ public static class VstPresetFile
 			throw new InvalidDataException("Corrupt VST3 preset: no 'Comp' chunk.");
 		}
 
-		return new VstPreset(classId, component, controller, metaInfo ?? string.Empty, version);
+		return new VstPreset(classId, component, controller, metaInfo, version);
 	}
 }

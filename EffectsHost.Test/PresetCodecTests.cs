@@ -156,9 +156,14 @@ public sealed class PresetCodecTests
 		Assert.AreEqual("<meta/>", restored.MetaInfo);
 
 		VstPreset bare = new(classId, [1], ControllerState: null, MetaInfo: null, VstPresetFile.FormatVersion);
-		VstPreset bareRestored = VstPresetFile.FromBytes(VstPresetFile.ToBytes(bare));
+		byte[] bareBytes = VstPresetFile.ToBytes(bare);
+		VstPreset bareRestored = VstPresetFile.FromBytes(bareBytes);
 
 		Assert.IsNull(bareRestored.ControllerState);
+		Assert.IsNull(bareRestored.MetaInfo);
+
+		// Re-saving a preset that was loaded must not add chunks the original did not have.
+		CollectionAssert.AreEqual(bareBytes, VstPresetFile.ToBytes(bareRestored));
 	}
 
 	/// <summary>
