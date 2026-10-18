@@ -203,7 +203,9 @@ public static class VstPresetFile
 		string classId = Encoding.ASCII.GetString(bytes, 8, ClassIdLength);
 		long listOffset = BinaryPrimitives.ReadInt64LittleEndian(bytes.AsSpan(40));
 
-		if (listOffset < HeaderLength || listOffset + 8 > bytes.Length)
+		// Each bounds check below subtracts from the length rather than adding to the offset, so a
+		// huge value read from a corrupt file cannot overflow past the comparison.
+		if (listOffset < HeaderLength || listOffset > bytes.Length - 8)
 		{
 			throw new InvalidDataException("Corrupt VST3 preset: the chunk list is outside the file.");
 		}
@@ -218,7 +220,7 @@ public static class VstPresetFile
 		int count = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(cursor + 4));
 		cursor += 8;
 
-		if (count < 0 || cursor + (count * ChunkEntryLength) > bytes.Length)
+		if (count < 0 || count > (bytes.Length - cursor) / ChunkEntryLength)
 		{
 			throw new InvalidDataException("Corrupt VST3 preset: the chunk index is truncated.");
 		}
@@ -234,7 +236,7 @@ public static class VstPresetFile
 			long size = BinaryPrimitives.ReadInt64LittleEndian(bytes.AsSpan(cursor + 12));
 			cursor += ChunkEntryLength;
 
-			if (offset < 0 || size < 0 || offset + size > bytes.Length)
+			if (offset < 0 || size < 0 || offset > bytes.Length || size > bytes.Length - offset)
 			{
 				throw new InvalidDataException($"Corrupt VST3 preset: the '{id}' chunk is outside the file.");
 			}
