@@ -2,6 +2,7 @@
 
 namespace ktsu.EffectsHost.Test;
 
+using System.Buffers.Binary;
 using System.Text;
 
 using ktsu.EffectsHost.Plugin;
@@ -136,6 +137,39 @@ public sealed class PresetCodecTests
 	{
 		Assert.ThrowsExactly<InvalidDataException>(() => VstPresetFile.FromBytes(new byte[8]));
 		Assert.ThrowsExactly<InvalidDataException>(() => VstPresetFile.FromBytes(Encoding.ASCII.GetBytes(new string('x', 64))));
+	}
+
+	/// <summary>
+	/// A field whose value would overflow a bounds check is refused as corrupt data, rather than
+	/// escaping as an <see cref="ArgumentOutOfRangeException"/> or <see cref="OverflowException"/>
+	/// the editor's load handler does not catch.
+	/// </summary>
+	/// <param name="field">Which field of a valid preset to corrupt.</param>
+	[TestMethod]
+	[DataRow("listOffset")]
+	[DataRow("count")]
+	[DataRow("size")]
+	public void OverflowingFieldsAreRefusedAsCorrupt(string field)
+	{
+		byte[] bytes = VstPresetFile.ToBytes(new VstPreset(new string('A', 32), [1, 2, 3], ControllerState: null, MetaInfo: null, VstPresetFile.FormatVersion));
+		int listOffset = (int)BinaryPrimitives.ReadInt64LittleEndian(bytes.AsSpan(40));
+		int firstEntry = listOffset + 8;
+
+		switch (field)
+		{
+			case "listOffset":
+				BinaryPrimitives.WriteInt64LittleEndian(bytes.AsSpan(40), long.MaxValue);
+				break;
+			case "count":
+				BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(listOffset + 4), 0x70000000);
+				break;
+			default:
+				BinaryPrimitives.WriteInt64LittleEndian(bytes.AsSpan(firstEntry + 4), 1);
+				BinaryPrimitives.WriteInt64LittleEndian(bytes.AsSpan(firstEntry + 12), long.MaxValue);
+				break;
+		}
+
+		Assert.ThrowsExactly<InvalidDataException>(() => VstPresetFile.FromBytes(bytes));
 	}
 
 	/// <summary>
