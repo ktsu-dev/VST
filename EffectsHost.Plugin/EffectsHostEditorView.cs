@@ -366,6 +366,13 @@ public sealed class EffectsHostEditorView<TModel> : IAudioPluginView
 		{
 			presetStatus = $"Save failed: {exception.Message}";
 		}
+		catch (ArgumentException exception)
+		{
+			// System.Text.Json refuses a NaN or infinite parameter value. A host can still set one
+			// directly, and this runs inside the ImGui render callback, so report it like any other
+			// failed save rather than let it escape into the host.
+			presetStatus = $"Save failed: {exception.Message}";
+		}
 	}
 
 	private void LoadPreset(string path)
