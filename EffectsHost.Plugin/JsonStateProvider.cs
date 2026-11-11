@@ -41,11 +41,20 @@ public static class JsonStateProvider
 	/// unchanged on every platform, which is what
 	/// <c>PresetCodecTests.APresetWrittenByTheArchivedCodecStillLoads</c> holds.
 	/// </para>
+	/// <para>
+	/// <see cref="JsonSerializerOptions.RespectNullableAnnotations"/> makes a JSON <c>null</c> for a
+	/// non-nullable property, such as <c>"ParameterValues": null</c>, fail the decode with a
+	/// <see cref="JsonException"/>. <c>required</c> alone only demands that the property is present, so
+	/// a hand-edited or corrupted preset used to decode with a null dictionary and throw a
+	/// <see cref="NullReferenceException"/> from <c>ApplyPresetState</c> inside the host, where the
+	/// editor's Load handler, which reports a <see cref="JsonException"/> as a failed load, never saw it.
+	/// </para>
 	/// </remarks>
 	private static readonly JsonSerializerOptions Options = new()
 	{
 		WriteIndented = true,
 		NewLine = "\n",
+		RespectNullableAnnotations = true,
 	};
 
 	/// <summary>Serializes a value to JSON.</summary>
@@ -58,7 +67,9 @@ public static class JsonStateProvider
 	/// <typeparam name="T">The type to deserialize to.</typeparam>
 	/// <param name="json">The JSON to read.</param>
 	/// <returns>The deserialized value.</returns>
-	/// <exception cref="JsonException">The payload deserialized to null.</exception>
+	/// <exception cref="JsonException">
+	/// The payload deserialized to null, or gave null to a property that is not nullable.
+	/// </exception>
 	public static T Deserialize<T>(string json) =>
 		JsonSerializer.Deserialize<T>(json, Options) ?? throw new JsonException("Deserialized payload was null.");
 }

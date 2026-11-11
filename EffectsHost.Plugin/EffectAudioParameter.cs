@@ -41,7 +41,23 @@ public sealed class EffectAudioParameter : AudioParameter
 	public override double ToPlain(double normalizedValue) => Descriptor.Range.Denormalize(normalizedValue);
 
 	/// <inheritdoc/>
-	public override double ToNormalized(double plainValue) => Descriptor.Range.Normalize(plainValue);
+	/// <remarks>
+	/// A plain value outside the range is clamped to its nearest end, infinities included, before it
+	/// reaches the taper. That clamp is what keeps the result finite: a logarithmic taper normalizes a
+	/// value below zero to NaN, and a host passing NaN through to automation stores NaN, which the
+	/// knob then displays and a preset save cannot write as JSON. NaN itself has no nearest end, so it
+	/// leaves the parameter at its current value, the same as any other input that can't be read.
+	/// </remarks>
+	public override double ToNormalized(double plainValue)
+	{
+		if (double.IsNaN(plainValue))
+		{
+			return NormalizedValue;
+		}
+
+		double normalized = Descriptor.Range.Normalize(Math.Clamp(plainValue, Descriptor.Range.Min, Descriptor.Range.Max));
+		return double.IsFinite(normalized) ? Math.Clamp(normalized, 0.0, 1.0) : NormalizedValue;
+	}
 
 	/// <inheritdoc/>
 	public override string ToString(double valueNormalized) =>

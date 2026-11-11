@@ -4,6 +4,7 @@ namespace ktsu.EffectsHost.Test;
 
 using System.Buffers.Binary;
 using System.Text;
+using System.Text.Json;
 
 using ktsu.EffectsHost.Plugin;
 
@@ -33,6 +34,25 @@ public sealed class PresetCodecTests
 		Assert.AreEqual("Gain", restored.EffectName);
 		Assert.AreEqual(-6.5, restored.ParameterValues["Gain"], 1e-12);
 		Assert.IsFalse(restored.Bypass);
+	}
+
+	[TestMethod]
+	[DataRow("""{"EffectName":"Gain","ParameterValues":null}""")]
+	[DataRow("""{"EffectName":null,"ParameterValues":{"Gain":-6}}""")]
+	public void APayloadWithANullRequiredFieldIsRejectedOnDecode(string payload)
+	{
+		PresetCodec codec = new(GainProcessor.ClassId);
+		byte[] presetBytes = VstPresetFile.ToBytes(new VstPreset(
+			codec.ClassId,
+			Encoding.UTF8.GetBytes(payload),
+			ControllerState: null,
+			MetaInfo: null,
+			VstPresetFile.FormatVersion));
+
+		// A JsonException is what the editor's LoadPreset reports as "Load failed". Before, the
+		// payload decoded with a null field, and ApplyPresetState then threw a
+		// NullReferenceException out of the ImGui render callback.
+		_ = Assert.ThrowsExactly<JsonException>(() => codec.Decode(presetBytes));
 	}
 
 	[TestMethod]
