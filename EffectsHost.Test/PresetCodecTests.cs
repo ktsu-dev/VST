@@ -91,6 +91,34 @@ public sealed class PresetCodecTests
 	}
 
 	[TestMethod]
+	public void SavingTwiceUnderTheSameNameKeepsBothPresets()
+	{
+		PresetCodec codec = new(GainProcessor.ClassId);
+		string directory = Path.Combine(Path.GetTempPath(), $"effectshost-test-{Guid.NewGuid():N}");
+		Directory.CreateDirectory(directory);
+
+		try
+		{
+			// The editor names presets by a one-second timestamp, so two saves in the same second
+			// arrive with the same base name.
+			EffectsHostPresetState second = MakeState();
+			second.ParameterValues["Gain"] = 3.0;
+
+			string firstPath = codec.SaveWithoutOverwriting(MakeState(), directory, "Gain-20261101-091257");
+			string secondPath = codec.SaveWithoutOverwriting(second, directory, "Gain-20261101-091257");
+
+			Assert.AreEqual("Gain-20261101-091257.vstpreset", Path.GetFileName(firstPath));
+			Assert.AreEqual("Gain-20261101-091257-2.vstpreset", Path.GetFileName(secondPath));
+			Assert.AreEqual(-6.5, codec.Load(firstPath).ParameterValues["Gain"], 1e-12);
+			Assert.AreEqual(3.0, codec.Load(secondPath).ParameterValues["Gain"], 1e-12);
+		}
+		finally
+		{
+			Directory.Delete(directory, recursive: true);
+		}
+	}
+
+	[TestMethod]
 	public void DecodingAPresetForADifferentDeviceStillYieldsItsState()
 	{
 		PresetCodec gainCodec = new(GainProcessor.ClassId);

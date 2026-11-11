@@ -57,6 +57,46 @@ public sealed class PresetCodec(Guid processorClassId)
 	public void Save(EffectsHostPresetState state, string path) => File.WriteAllBytes(path, Encode(state));
 
 	/// <summary>
+	/// Saves a preset state to a new <c>.vstpreset</c> file, never replacing an existing one.
+	/// </summary>
+	/// <param name="state">The preset state to save.</param>
+	/// <param name="directory">The directory to save into.</param>
+	/// <param name="baseName">The file name to use, without the extension.</param>
+	/// <returns>The path of the file that was written.</returns>
+	/// <remarks>
+	/// The file is <paramref name="baseName"/><c>.vstpreset</c>, or, when that name is taken,
+	/// <paramref name="baseName"/><c>-2.vstpreset</c>, <c>-3</c> and so on. Each file is created
+	/// with <see cref="FileMode.CreateNew"/>, so a name taken between the check and the write is
+	/// skipped rather than overwritten.
+	/// </remarks>
+	public string SaveWithoutOverwriting(EffectsHostPresetState state, string directory, string baseName)
+	{
+		byte[] bytes = Encode(state);
+		for (int attempt = 1; ; attempt++)
+		{
+			string fileName = attempt == 1
+				? $"{baseName}.vstpreset"
+				: string.Create(CultureInfo.InvariantCulture, $"{baseName}-{attempt}.vstpreset");
+			string path = Path.Combine(directory, fileName);
+			if (File.Exists(path))
+			{
+				continue;
+			}
+
+			try
+			{
+				using FileStream stream = new(path, FileMode.CreateNew, FileAccess.Write);
+				stream.Write(bytes, 0, bytes.Length);
+				return path;
+			}
+			catch (IOException) when (File.Exists(path))
+			{
+				// Another writer took the name after the check; try the next one.
+			}
+		}
+	}
+
+	/// <summary>
 	/// Loads a preset state from a <c>.vstpreset</c> file.
 	/// </summary>
 	/// <param name="path">The source file path.</param>

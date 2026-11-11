@@ -346,15 +346,16 @@ public sealed class EffectsHostEditorView<TModel> : IAudioPluginView
 
 	private void SavePreset()
 	{
-		string fileName = string.Create(
+		// The timestamp has one-second resolution, so SaveWithoutOverwriting adds a -2, -3, ... suffix rather than
+		// overwrite a preset saved earlier in the same second.
+		string baseName = string.Create(
 			CultureInfo.InvariantCulture,
-			$"{controller.Model.Effect.Name}-{DateTime.Now:yyyyMMdd-HHmmss}.vstpreset");
-		string path = Path.Combine(presetDirectory, fileName);
+			$"{controller.Model.Effect.Name}-{DateTime.Now:yyyyMMdd-HHmmss}");
 
 		try
 		{
 			Directory.CreateDirectory(presetDirectory);
-			presetCodec.Save(controller.CapturePresetState(), path);
+			string fileName = Path.GetFileName(presetCodec.SaveWithoutOverwriting(controller.CapturePresetState(), presetDirectory, baseName));
 			presetStatus = $"Saved {fileName}";
 			RefreshPresetList();
 		}
