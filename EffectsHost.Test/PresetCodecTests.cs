@@ -158,7 +158,7 @@ public sealed class PresetCodecTests
 		public override bool CanSeek => false;
 		public override bool CanWrite => true;
 		public override long Length => inner.Length;
-		public override long Position { get => inner.Position; set => throw new NotSupportedException(); }
+		public override long Position { get => inner.Position; set => throw new NotSupportedException($"Cannot seek to {value}: the stream is not seekable."); }
 		public override void Flush() => inner.Flush();
 		public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 		public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
