@@ -119,6 +119,64 @@ public sealed class PresetCodecTests
 	}
 
 	[TestMethod]
+	public void AFailedWriteReachesTheCallerAndLeavesNoPresetBehind()
+	{
+		PresetCodec codec = new(GainProcessor.ClassId);
+		string directory = Path.Combine(Path.GetTempPath(), "EffectsHost-" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(directory);
+		try
+		{
+			int opens = 0;
+
+			// Creating the file succeeds and the write fails, the way it does on a full disk.
+			IOException thrown = Assert.ThrowsExactly<IOException>(() => codec.SaveWithoutOverwriting(MakeState(), directory, "Gain-20261112-120000", path =>
+			{
+				if (++opens > 1)
+				{
+					// The bug: the failed write was taken for a collision and the next name tried, forever.
+					throw new InvalidOperationException("A second name was tried after a failed write.");
+				}
+
+				return new FullDiskStream(new FileStream(path, FileMode.CreateNew, FileAccess.Write));
+			}));
+
+			Assert.AreEqual(FullDiskStream.Message, thrown.Message);
+			Assert.AreEqual(0, Directory.GetFiles(directory).Length, "The partial preset must be deleted.");
+		}
+		finally
+		{
+			Directory.Delete(directory, recursive: true);
+		}
+	}
+
+	/// <summary>A stream whose file was created but which has no room for any bytes.</summary>
+	private sealed class FullDiskStream(FileStream inner) : Stream
+	{
+		public const string Message = "No space left on device";
+
+		public override bool CanRead => false;
+		public override bool CanSeek => false;
+		public override bool CanWrite => true;
+		public override long Length => inner.Length;
+		public override long Position { get => inner.Position; set => throw new NotSupportedException(); }
+		public override void Flush() => inner.Flush();
+		public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+		public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+		public override void SetLength(long value) => throw new NotSupportedException();
+		public override void Write(byte[] buffer, int offset, int count) => throw new IOException(Message);
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				inner.Dispose();
+			}
+
+			base.Dispose(disposing);
+		}
+	}
+
+	[TestMethod]
 	public void DecodingAPresetForADifferentDeviceStillYieldsItsState()
 	{
 		PresetCodec gainCodec = new(GainProcessor.ClassId);

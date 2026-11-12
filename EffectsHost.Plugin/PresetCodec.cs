@@ -67,9 +67,22 @@ public sealed class PresetCodec(Guid processorClassId)
 	/// The file is <paramref name="baseName"/><c>.vstpreset</c>, or, when that name is taken,
 	/// <paramref name="baseName"/><c>-2.vstpreset</c>, <c>-3</c> and so on. Each file is created
 	/// with <see cref="FileMode.CreateNew"/>, so a name taken between the check and the write is
-	/// skipped rather than overwritten.
+	/// skipped rather than overwritten. A failure after the file is created, such as a full disk,
+	/// is not a taken name: the partial file is deleted and the exception reaches the caller.
 	/// </remarks>
-	public string SaveWithoutOverwriting(EffectsHostPresetState state, string directory, string baseName)
+	public string SaveWithoutOverwriting(EffectsHostPresetState state, string directory, string baseName) =>
+		SaveWithoutOverwriting(state, directory, baseName, static path => new FileStream(path, FileMode.CreateNew, FileAccess.Write));
+
+	/// <summary>
+	/// Saves a preset state to a new <c>.vstpreset</c> file, opening each candidate through
+	/// <paramref name="createNew"/>.
+	/// </summary>
+	/// <param name="state">The preset state to save.</param>
+	/// <param name="directory">The directory to save into.</param>
+	/// <param name="baseName">The file name to use, without the extension.</param>
+	/// <param name="createNew">Creates the file at a path, failing if it already exists.</param>
+	/// <returns>The path of the file that was written.</returns>
+	internal string SaveWithoutOverwriting(EffectsHostPresetState state, string directory, string baseName, Func<string, Stream> createNew)
 	{
 		byte[] bytes = Encode(state);
 		for (int attempt = 1; ; attempt++)
@@ -83,16 +96,47 @@ public sealed class PresetCodec(Guid processorClassId)
 				continue;
 			}
 
+			Stream stream;
 			try
 			{
-				using FileStream stream = new(path, FileMode.CreateNew, FileAccess.Write);
-				stream.Write(bytes, 0, bytes.Length);
-				return path;
+				stream = createNew(path);
 			}
 			catch (IOException) when (File.Exists(path))
 			{
 				// Another writer took the name after the check; try the next one.
+				continue;
 			}
+
+			try
+			{
+				using (stream)
+				{
+					stream.Write(bytes, 0, bytes.Length);
+				}
+
+				return path;
+			}
+			catch
+			{
+				TryDelete(path);
+				throw;
+			}
+		}
+	}
+
+	private static void TryDelete(string path)
+	{
+		try
+		{
+			File.Delete(path);
+		}
+		catch (IOException)
+		{
+			// Best effort: the original failure is the one the caller needs to see.
+		}
+		catch (UnauthorizedAccessException)
+		{
+			// Best effort, as above.
 		}
 	}
 
