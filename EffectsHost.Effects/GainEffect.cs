@@ -33,6 +33,7 @@ public sealed class GainEffect : IAudioEffect
 
 	private float currentGain = 1.0f;
 	private float smoothingCoefficient;
+	private bool snapGainToTarget = true;
 
 	/// <inheritdoc/>
 	public string Name => "Gain";
@@ -49,12 +50,22 @@ public sealed class GainEffect : IAudioEffect
 	}
 
 	/// <inheritdoc/>
-	public void Reset() => currentGain = 1.0f;
+	/// <remarks>
+	/// Gliding from a stale or hard-coded level after a reset would play the signal at that level
+	/// until the smoother caught up, so the next block starts at its target gain instead.
+	/// </remarks>
+	public void Reset() => snapGainToTarget = true;
 
 	/// <inheritdoc/>
 	public void ProcessBlock(in EffectBlock block)
 	{
 		float targetGain = (float)Decibels<double>.Create(block.ParameterValues[GainParameterIndex]).ToAmplitude().Value;
+		if (snapGainToTarget)
+		{
+			currentGain = targetGain;
+			snapGainToTarget = false;
+		}
+
 		float gain = currentGain;
 		float coefficient = smoothingCoefficient;
 

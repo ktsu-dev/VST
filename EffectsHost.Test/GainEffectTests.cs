@@ -95,7 +95,7 @@ public sealed class GainEffectTests
 	}
 
 	[TestMethod]
-	public void ResetReturnsGainToUnity()
+	public void ResetSnapsGainToTarget()
 	{
 		GainEffect effect = new();
 		effect.Prepare(new AudioEffectSetup(SampleRate, BlockSize));
@@ -108,6 +108,50 @@ public sealed class GainEffectTests
 		effect.Reset();
 		ProcessBlocks(effect, gainDb: 0.0, input, output, blockCount: 1);
 
-		Assert.IsGreaterThan(0.9f, output[0]);
+		Assert.AreEqual(1.0f, output[0], 1e-5f);
+	}
+
+	[TestMethod]
+	public void FirstBlockAfterPrepareStartsAtTheTargetGain()
+	{
+		GainEffect effect = new();
+		effect.Prepare(new AudioEffectSetup(SampleRate, BlockSize));
+
+		float[] input = new float[BlockSize];
+		Array.Fill(input, 1.0f);
+		float[] output = new float[BlockSize];
+
+		ProcessBlocks(effect, gainDb: -60.0, input, output, blockCount: 1);
+
+		// -60 dB is 0.001. Gliding down from unity would start near 1.0.
+		for (int i = 0; i < output.Length; i++)
+		{
+			Assert.AreEqual(0.001f, output[i], 1e-6f, $"Sample {i} is not at the target gain");
+		}
+	}
+
+	[TestMethod]
+	public void ReactivatingAtANonUnityTargetPlaysNoBurst()
+	{
+		GainEffect effect = new();
+		float[] input = new float[BlockSize];
+		Array.Fill(input, 1.0f);
+		float[] output = new float[BlockSize];
+
+		// Settle at +12 dB, then re-activate (as a host does on transport start or a sample-rate
+		// change) with the gain at -60 dB.
+		effect.Prepare(new AudioEffectSetup(SampleRate, BlockSize));
+		ProcessBlocks(effect, gainDb: 12.0, input, output, blockCount: 50);
+		effect.Prepare(new AudioEffectSetup(SampleRate, BlockSize));
+		ProcessBlocks(effect, gainDb: -60.0, input, output, blockCount: 1);
+
+		Assert.AreEqual(0.001f, output[0], 1e-6f);
+
+		// Settle at -60 dB, then reset with the gain at -20 dB.
+		ProcessBlocks(effect, gainDb: -60.0, input, output, blockCount: 50);
+		effect.Reset();
+		ProcessBlocks(effect, gainDb: -20.0, input, output, blockCount: 1);
+
+		Assert.AreEqual(0.1f, output[0], 1e-6f);
 	}
 }
